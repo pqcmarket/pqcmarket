@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/identity", label: "Identity" },
   { href: "/wallet", label: "Wallet" },
   { href: "/vault", label: "Vault" },
+  { href: "/revenue", label: "Revenue" },
   { href: "/prove", label: "Verify" },
   { href: "/docs", label: "Docs" },
 ];

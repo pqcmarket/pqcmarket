@@ -16,6 +16,9 @@ import { RevenueScene, RevenueTweet } from "./revenue-graphics";
 import { NumbersScene, NumbersTweet } from "./stats-graphics";
 import { CoinPageScene, CoinPageTweet } from "./coinpage-graphics";
 import { PoolsScene, PoolsTweet } from "./pools-graphics";
+import { RecapScene, RecapTweet } from "./recap-graphics";
+import { DocsScene, DocsTweet } from "./docs-graphics";
+import { BurnScene, BurnTweet } from "./burn-graphics";
 import { SceneAvatar, SceneBunkerMode, SceneHeader, SceneIntro, ScenePortrait, SceneProof, SceneSquare } from "./scene-graphics";
 
 /**
@@ -535,6 +538,12 @@ export function ProfilePicture() {
 export type Graphic = { id: string; title: string; note: string; w: number; h: number; group: string; Component: () => ReactNode };
 
 export const GRAPHICS: Graphic[] = [
+  { id: "buyback-burn", title: "Buyback & burn", note: "Live from the chain · /revenue", w: 1600, h: 900, group: "Revenue & buybacks", Component: BurnTweet },
+  { id: "buyback-burn-bunker", title: "Buyback & burn · bunker", note: "Live · artwork edition", w: 1600, h: 900, group: "Revenue & buybacks", Component: BurnScene },
+  { id: "docs-updated", title: "Documentation, updated", note: "Docs refresh · 2:1", w: 1500, h: 750, group: "Docs", Component: DocsTweet },
+  { id: "docs-updated-bunker", title: "Documentation, updated · bunker", note: "Docs refresh · artwork edition", w: 1500, h: 750, group: "Docs", Component: DocsScene },
+  { id: "recap-v2", title: "Daily recap", note: "Live stats · hourly launches · top tokens", w: 1600, h: 900, group: "Platform stats", Component: RecapTweet },
+  { id: "recap-v2-bunker", title: "Daily recap · bunker", note: "Live stats · artwork edition", w: 1600, h: 900, group: "Platform stats", Component: RecapScene },
   { id: "pq-pools-bunker", title: "Post-quantum pools · bunker", note: "Coming soon · artwork edition", w: 1600, h: 900, group: "Post-quantum pools", Component: PoolsScene },
   { id: "pq-pools", title: "Post-quantum pools", note: "Coming soon", w: 1600, h: 900, group: "Post-quantum pools", Component: PoolsTweet },
   { id: "token-pages-bunker", title: "Token pages, rebuilt · bunker", note: "Live quantum coin page · artwork edition", w: 1600, h: 900, group: "Token pages", Component: CoinPageScene },
