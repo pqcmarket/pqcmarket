@@ -124,7 +124,7 @@ function Burn({ scene }: { scene?: boolean }) {
           <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 30, color: MUTED }}>$PQC burned</span>
         </div>
         <div style={{ marginTop: 22, fontFamily: SANS, fontSize: 20, lineHeight: 1.5, color: MUTED, maxWidth: 520 }}>
-          60% of platform revenue buys $PQC on the open market and burns it, every 30 minutes.
+          60% of platform revenue buys $PQC on the open market and burns it, every hour.
         </div>
         <div style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
           <Small value={v((x) => `${x.solSpent.toFixed(1)} SOL`)} label="spent on buybacks" bg={bg} />

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "keeper": "node --env-file=.env keeper/keeper.mjs"
+    "keeper": "node --env-file=.env keeper/keeper.mjs",
+    "pool-rewards": "node --env-file=.env keeper/pool-rewards.mjs"
   },
   "dependencies": {
     "@noble/curves": "^2.4.0",

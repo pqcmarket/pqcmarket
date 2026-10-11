@@ -53,7 +53,7 @@ function BurnDiagram() {
       </svg>
       <div style={{ display: "flex", justifyContent: "space-between", fontFamily: MONO, fontSize: 13, color: DIM, marginTop: 4 }}>
         <span>circulating supply</span>
-        <span style={{ color: GREEN }}>↓ every 30 min</span>
+        <span style={{ color: GREEN }}>↓ every hour</span>
       </div>
     </div>
   );

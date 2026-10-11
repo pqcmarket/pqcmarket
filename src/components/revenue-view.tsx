@@ -59,7 +59,7 @@ export function RevenueView() {
       <div className="mb-8">
         <h1 className="font-serif text-[28px] font-bold tracking-tight">Revenue</h1>
         <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-muted">
-          60% of platform revenue buys $PQC on the open market and burns it, every 30 minutes. Every number here is read live from Solana, so
+          60% of platform revenue buys $PQC on the open market and burns it, every hour. Every number here is read live from Solana, so
           anyone can check it against the chain.
         </p>
       </div>

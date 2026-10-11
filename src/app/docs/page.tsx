@@ -23,6 +23,7 @@ const TOC: TocItem[] = [
   { id: "proofs", label: "Proof of possession" },
   { id: "wallets", label: "Wallets" },
   { id: "vault", label: "Quantum vault" },
+  { id: "pools", label: "Post-quantum pools" },
   { id: "security", label: "Security analysis" },
   { id: "parameters", label: "Parameters" },
   { id: "verify-yourself", label: "Verify it yourself" },
@@ -345,6 +346,33 @@ seedsᵢ = HKDF(identity seeds, &quot;pqc.market/vault/v1/sk|pub&quot; ‖ i)</F
               <B>The remaining dependency</B> is how the identity is derived. A wallet-only identity is re-derivable by whoever holds the wallet
               key, so a post-quantum attacker who recovers that key could also derive the vault keys. A passphrase-hardened identity closes
               that gap.
+            </P>
+          </Section>
+
+          <Section id="pools" title="Post-quantum pools">
+            <P>
+              Pools are built on the vault program; there is no separate pool contract. A position is a chain of vaults owned by a{" "}
+              <B>pool identity</B>, derived from your identity under its own domain, so pool funds never mix with your personal vault and
+              every withdrawal is the same on-chain WOTS spend described above.
+            </P>
+            <Formula>pool.skSeed  = HKDF(identity.skSeed,  &quot;pqc.market/pool/v1/sk&quot;)
+pool.pubSeed = HKDF(identity.pubSeed, &quot;pqc.market/pool/v1/pub&quot;)
+position     = vault[0..] of the pool identity</Formula>
+            <P>
+              You can deposit SOL, USDC and $PQC. The first deposit registers the position by its first vault&apos;s key hash; the server
+              derives the address from that hash, so every registered position is a real WOTS-locked vault. To find where a position lives
+              now, anyone can follow its tombstones, since each retired vault names the next one.
+            </P>
+            <P>
+              <B>Yield</B> is the pools&apos; 20% of platform revenue, paid in SOL into each position&apos;s live vault on a fixed
+              schedule, pro-rata by USD value. A position&apos;s weight is the smaller of its value now and its value at the previous
+              payout, so a deposit starts earning from the payout after it lands. Payouts are plain transfers from a public rewards
+              wallet, and the pools page totals them from the chain.
+            </P>
+            <P>
+              <B>What this protects.</B> Withdrawing needs a valid WOTS signature over the exact recipient, mint, amount and next vault.
+              A forged or stolen ed25519 signature can&apos;t produce one. The remaining dependency is the same as the vault&apos;s: a
+              wallet-only identity is re-derivable from the wallet key, and a passphrase-hardened identity closes that gap.
             </P>
           </Section>
 

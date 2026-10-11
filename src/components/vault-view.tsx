@@ -21,6 +21,7 @@ import {
   type SpendStep,
   type VaultSlot,
 } from "@/lib/vault/app";
+import { POOL_TOKENS, poolIdentity } from "@/lib/vault/pool";
 import { useIdentity } from "./identity";
 import { GatedButton } from "./unlock";
 import { AddressPrint } from "./wallet-view";
@@ -137,9 +138,26 @@ const STEPS: { id: SpendStep; label: string }[] = [
   { id: "done", label: "vault retired" },
 ];
 
-function VaultBody() {
+const POOL_MINTS = POOL_TOKENS.flatMap((t) => (t.mint ? [t.mint] : []));
+
+/** Records a pool position (idempotent) so the rewards distributor pays it. */
+function registerPool(pkHash: Uint8Array) {
+  const hex = Array.from(pkHash, (b) => b.toString(16).padStart(2, "0")).join("");
+  return fetch("/api/pools/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pkHash: hex }) });
+}
+
+/** The pool position: the same vault flow, on the pool identity's vault chain. */
+export function PoolBody() {
+  return <VaultBody pool />;
+}
+
+function VaultBody({ pool = false }: { pool?: boolean }) {
   const { wallet, unlocked, signTransaction, signAllTransactions, lock } = useIdentity();
-  const identity = useMemo(() => (unlocked ? { skSeed: unlocked.skSeed, pubSeed: unlocked.pubSeed } : null), [unlocked]);
+  const identity = useMemo(() => {
+    if (!unlocked) return null;
+    const id = { skSeed: unlocked.skSeed, pubSeed: unlocked.pubSeed };
+    return pool ? poolIdentity(id) : id;
+  }, [unlocked, pool]);
 
   const [slots, setSlots] = useState<VaultSlot[] | null>(null);
   const [rent, setRent] = useState<Rent | null>(null);
@@ -167,7 +185,12 @@ function VaultBody() {
     setRecords(recs);
     setBalances(bals);
     setOwn(mine[wallet] ?? null);
-  }, [identity, wallet]);
+    // Self-healing registration: once the position's first vault exists on-chain.
+    const root = found.slots[0];
+    if (pool && (root.state.kind === "spent" || root.state.lamports > BigInt(0) || (bals[root.key.address.toBase58()]?.tokens.length ?? 0) > 0)) {
+      void registerPool(root.key.pkHash).catch(() => {});
+    }
+  }, [identity, wallet, pool]);
 
   useEffect(() => {
     setSlots(null);
@@ -252,9 +275,10 @@ function VaultBody() {
       }
       const signed = await signTransaction(buildTx(from, chain.blockhash, ixs));
       const sig = await sendTx(signed);
+      if (pool && slots?.[0]) await registerPool(slots[0].key.pkHash).catch(() => {});
       setTimeout(() => void load(), 11_000); // balances are cached for 10s
       await load();
-      return `Deposited into vault #${current.index} · tx ${short(sig, 8, 8)}`;
+      return pool ? `Deposited into your pool position · tx ${short(sig, 8, 8)}` : `Deposited into vault #${current.index} · tx ${short(sig, 8, 8)}`;
     });
 
   const forward = (slot: VaultSlot) =>
@@ -285,7 +309,7 @@ function VaultBody() {
         <Panel className="p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-dim">Vault balance</div>
+              <div className="text-[11px] uppercase tracking-wider text-dim">{pool ? "Pool position" : "Vault balance"}</div>
               <div className="mt-1 flex items-baseline gap-2">
                 {!current ? (
                   <Skeleton className="h-9 w-40" />
@@ -367,7 +391,7 @@ function VaultBody() {
             </div>
             <div className="p-5">
               {tab === "deposit" ? (
-                <DepositTab address={currentAddress} balance={balance} own={own} busy={busy} onDeposit={deposit} />
+                <DepositTab address={currentAddress} balance={balance} own={own} busy={busy} onDeposit={deposit} allowed={pool ? POOL_MINTS : undefined} />
               ) : (
                 <WithdrawTab
                   key={currentAddress}
@@ -399,7 +423,7 @@ function VaultBody() {
               <AddressPrint address={currentAddress} cellClass="h-3" />
               <dl className="mt-4 space-y-2 font-mono text-[11.5px]">
                 <KV k="address" v={<CopyText value={currentAddress} display={short(currentAddress, 6, 6)} />} />
-                <KV k="derivation" v={`vault/v1 · ${current.index}`} />
+                <KV k="derivation" v={`${pool ? "pool" : "vault"}/v1 · ${current.index}`} />
                 <KV k="key stored" v="nowhere" />
                 <KV k="program" v={<CopyText value={PROGRAM_ID.toBase58()} display={short(PROGRAM_ID.toBase58(), 4, 4)} />} />
               </dl>
@@ -534,13 +558,17 @@ function DepositTab({
   own,
   busy,
   onDeposit,
+  allowed,
 }: {
   address: string;
   balance?: Balance;
   own: Balance | null;
   busy: string | null;
   onDeposit: (p: { mint: string | null; amount: bigint }) => void;
+  /** Mints this deposit accepts besides SOL (pools); every token when omitted. */
+  allowed?: string[];
 }) {
+  const ownTokens = (own?.tokens ?? []).filter((t) => !allowed || allowed.includes(t.mint));
   const [copied, setCopied] = useState(false);
   const [asset, setAsset] = useState("SOL");
   const [amount, setAmount] = useState("");
@@ -566,7 +594,11 @@ function DepositTab({
           <span className="shrink-0 text-muted group-hover:text-fg">{copied ? <Check size={14} className="text-up" /> : <Copy size={14} />}</span>
         </button>
         <div className="mt-2 flex items-center justify-between gap-3 text-[11.5px] text-dim">
-          <span>Send SOL or any SPL / Token-2022 token from anywhere. This address changes after each withdrawal.</span>
+          <span>
+            {allowed
+              ? "Send SOL, USDC or $PQC. Other tokens earn nothing here. This address changes after each withdrawal."
+              : "Send SOL or any SPL / Token-2022 token from anywhere. This address changes after each withdrawal."}
+          </span>
           <a href={`https://solscan.io/account/${address}`} target="_blank" rel="noreferrer" className="flex shrink-0 cursor-pointer items-center gap-1 hover:text-fg">
             Solscan <ArrowUpRight size={11} />
           </a>
@@ -585,7 +617,7 @@ function DepositTab({
               setAsset(v);
               setAmount("");
             }}
-            options={[{ value: "SOL", label: "SOL" }, ...(own?.tokens ?? []).map((t) => ({ value: t.mint, label: tokenLabel(t) }))]}
+            options={[{ value: "SOL", label: "SOL" }, ...ownTokens.map((t) => ({ value: t.mint, label: tokenLabel(t) }))]}
             available={own ? (asset === "SOL" ? sol(own.sol) : token ? sol(token.uiAmount) : "0") : "…"}
           />
           <GatedButton className="w-full" busy={busy === "deposit"} disabled={!valid || busy !== null} onClick={() => valid && onDeposit({ mint: asset === "SOL" ? null : asset, amount: raw })}>
