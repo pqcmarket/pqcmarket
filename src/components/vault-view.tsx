@@ -140,10 +140,13 @@ const STEPS: { id: SpendStep; label: string }[] = [
 
 const POOL_MINTS = POOL_TOKENS.flatMap((t) => (t.mint ? [t.mint] : []));
 
-/** Records a pool position (idempotent) so the rewards distributor pays it. */
-function registerPool(pkHash: Uint8Array) {
+/**
+ * Records a vault chain (idempotent) so payouts can find it: pool positions for
+ * pool yield, personal vaults for quantum holder rewards.
+ */
+function registerChain(pool: boolean, pkHash: Uint8Array) {
   const hex = Array.from(pkHash, (b) => b.toString(16).padStart(2, "0")).join("");
-  return fetch("/api/pools/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pkHash: hex }) });
+  return fetch(pool ? "/api/pools/register" : "/api/vault/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pkHash: hex }) });
 }
 
 /** The pool position: the same vault flow, on the pool identity's vault chain. */
@@ -185,10 +188,10 @@ function VaultBody({ pool = false }: { pool?: boolean }) {
     setRecords(recs);
     setBalances(bals);
     setOwn(mine[wallet] ?? null);
-    // Self-healing registration: once the position's first vault exists on-chain.
+    // Self-healing registration: once the chain's first vault exists on-chain.
     const root = found.slots[0];
-    if (pool && (root.state.kind === "spent" || root.state.lamports > BigInt(0) || (bals[root.key.address.toBase58()]?.tokens.length ?? 0) > 0)) {
-      void registerPool(root.key.pkHash).catch(() => {});
+    if (root.state.kind === "spent" || root.state.lamports > BigInt(0) || (bals[root.key.address.toBase58()]?.tokens.length ?? 0) > 0) {
+      void registerChain(pool, root.key.pkHash).catch(() => {});
     }
   }, [identity, wallet, pool]);
 
@@ -275,7 +278,7 @@ function VaultBody({ pool = false }: { pool?: boolean }) {
       }
       const signed = await signTransaction(buildTx(from, chain.blockhash, ixs));
       const sig = await sendTx(signed);
-      if (pool && slots?.[0]) await registerPool(slots[0].key.pkHash).catch(() => {});
+      if (slots?.[0]) await registerChain(pool, slots[0].key.pkHash).catch(() => {});
       setTimeout(() => void load(), 11_000); // balances are cached for 10s
       await load();
       return pool ? `Deposited into your pool position · tx ${short(sig, 8, 8)}` : `Deposited into vault #${current.index} · tx ${short(sig, 8, 8)}`;

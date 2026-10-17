@@ -41,7 +41,7 @@ async function curvesFor(mints: string[]): Promise<Record<string, CurveState>> {
 
 export async function GET() {
   try {
-    const stats = await cached("platform:stats:v3", 5 * 60_000, async () => {
+    const stats = await cached("platform:stats:v4", 5 * 60_000, async () => {
       const since = new Date(Date.now() - 86_400_000).toISOString();
       const live = (q: any) => q.eq("status", "live");
       const [launches24h, quantum, paired, identities, hardened, signatures, vaultWithdrawals] = await Promise.all([
@@ -97,6 +97,21 @@ export async function GET() {
           };
         });
       const firstLaunch = rows.map((r) => r.launched_at as string).filter(Boolean).sort()[0] ?? null;
+
+      // All-time growth: total coins launched at the end of each hour since the first, at most 240 points.
+      const times = rows.map((r) => Date.parse(r.launched_at as string)).filter(Number.isFinite).sort((a, b) => a - b);
+      const growth: [number, number][] = [];
+      if (times.length) {
+        const start = Math.floor(times[0] / 3_600_000) * 3_600_000;
+        const hours = Math.max(1, Math.ceil((now - start) / 3_600_000));
+        const step = Math.max(1, Math.ceil(hours / 240));
+        let i = 0;
+        for (let h = step; h < hours + step; h += step) {
+          const end = Math.min(now, start + h * 3_600_000);
+          while (i < times.length && times[i] <= end) i++;
+          growth.push([Math.round(end / 1000), i]);
+        }
+      }
       return {
         launches: rows.length,
         launches24h,
@@ -114,6 +129,7 @@ export async function GET() {
         volume24h: Math.round(volume24h),
         firstLaunch,
         hourly,
+        growth,
         top,
         at: new Date().toISOString(),
       };

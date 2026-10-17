@@ -82,6 +82,8 @@ export async function POST(request: Request) {
 
   // Pair: SOL (default) or any quote pump.fun accepts. A dev buy on a token pair
   // is paid in SOL and swapped through Jupiter inside the launch.
+  // Quantum holder rewards: half the coin's creator fees go to holders who keep it in a pqc-vault.
+  const rewards = body.rewards === true;
   const quoteMint = typeof body.quoteMint === "string" && !isSolQuote(body.quoteMint) ? body.quoteMint : null;
   let pair: QuoteToken | null = null;
   let swapQuote: SwapQuote | null = null;
@@ -331,6 +333,8 @@ export async function POST(request: Request) {
     quote_mint: pair?.mint ?? null,
     quote_symbol: pair?.symbol ?? null,
     quote_image: pair?.image ?? null,
+    reward_mode: rewards ? "holders" : null,
+    reward_share_bps: rewards ? 5000 : null,
     status: "pending",
   });
   if (error) return bad(error.message, 500);

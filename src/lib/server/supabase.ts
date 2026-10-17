@@ -58,6 +58,8 @@ export type LaunchRow = {
   quote_mint: string | null;
   quote_symbol: string | null;
   quote_image: string | null;
+  reward_mode: string | null;
+  reward_share_bps: number | null;
   status: "pending" | "live" | "failed";
   tx_signature: string | null;
   created_at: string;

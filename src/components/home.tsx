@@ -13,12 +13,13 @@ import { ButtonLink, Segmented } from "./ui";
 
 type Sort = "new" | "mcap" | "volume" | "holders";
 type Status = "all" | "graduated";
-type Kind = "all" | "standard" | "quantum";
+type Kind = "all" | "standard" | "quantum" | "rewards";
 
 const KINDS: { value: Kind; label: string; hint: string }[] = [
   { value: "all", label: "All coins", hint: "Every pqc.market launch" },
   { value: "standard", label: "Standard", hint: "Post-quantum provenance, dev funds in a wallet" },
   { value: "quantum", label: "Quantum", hint: "Hash-based, dev funds locked in a quantum vault" },
+  { value: "rewards", label: "Rewards", hint: "Half the creator fees go to holders who keep the coin in a quantum vault" },
 ];
 
 export function Home() {
@@ -192,7 +193,7 @@ function CoinsSection() {
           anchored: false,
         };
         if (statusRef.current !== "all" || sortRef.current !== "new" || queryRef.current) return;
-        if ((kindRef.current === "quantum" && !item.dev_vault) || (kindRef.current === "standard" && item.dev_vault)) return;
+        if ((kindRef.current === "quantum" && !item.dev_vault) || (kindRef.current === "standard" && item.dev_vault) || (kindRef.current === "rewards" && item.reward_mode !== "holders")) return;
         const p = pairRef.current;
         if ((p === "sol" && item.quote_mint) || (p === "token" && !item.quote_mint) || (p !== "all" && p !== "sol" && p !== "token" && item.quote_mint !== p)) return;
         setLaunches((prev) => (prev && !prev.some((l) => l.mint === item.mint) ? [item, ...prev] : prev));
@@ -347,7 +348,7 @@ function CoinsSection() {
             </button>
           </div>
         ) : (
-          <Empty filtered={status !== "all" ? "graduated" : kind === "quantum" ? "quantum" : kind === "standard" ? "standard" : null} />
+          <Empty filtered={status !== "all" ? "graduated" : kind === "all" ? null : kind} />
         )
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -371,11 +372,12 @@ function CoinsSection() {
   );
 }
 
-function Empty({ filtered }: { filtered: "graduated" | "quantum" | "standard" | null }) {
+function Empty({ filtered }: { filtered: "graduated" | "quantum" | "standard" | "rewards" | null }) {
   const copy = {
     graduated: ["Nothing graduated yet", "Coins graduate when their bonding curve fills and liquidity moves to PumpSwap."],
     quantum: ["No quantum coins yet", "Quantum launches put the dev buy straight into a vault only a hash-based signature can open."],
     standard: ["No standard coins yet", "Standard launches carry a post-quantum provenance signature with any of the eight schemes."],
+    rewards: ["No rewards coins yet", "Launch with quantum holder rewards and half your coin's creator fees go to holders who keep it in a quantum vault."],
   } as const;
   const [title, body] = filtered ? copy[filtered] : ["No coins yet", "Be the first to launch a coin with a hash-based, post-quantum provenance signature."];
   return (

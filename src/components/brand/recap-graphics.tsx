@@ -22,7 +22,8 @@ type Stats = {
   signatures: number;
   marketCap: number;
   volume24h: number;
-  hourly?: number[];
+  creators: number;
+  growth?: [number, number][];
   top?: Top[];
 };
 
@@ -101,58 +102,53 @@ function Headline({ label, value, sub, color, bg }: { label: string; value: stri
   );
 }
 
-function HourlyChart({ hourly, bg }: { hourly: number[]; bg: string }) {
+function GrowthChart({ growth, total, bg }: { growth: [number, number][]; total: number; bg: string }) {
   const W = 788;
   const H = 214;
-  const gap = 8;
-  const bw = (W - gap * 23) / 24;
-  const max = Math.max(1, ...hourly);
-  const peak = hourly.indexOf(max);
-  const ticks = ["24h ago", "18h", "12h", "6h", "now"];
+  const pts = growth.length >= 2 ? growth : [];
+  const t0 = pts[0]?.[0] ?? 0;
+  const t1 = pts.at(-1)?.[0] ?? 1;
+  const max = Math.max(1, pts.at(-1)?.[1] ?? 1);
+  const x = (t: number) => ((t - t0) / Math.max(1, t1 - t0)) * (W - 10);
+  const y = (v: number) => H - 4 - (v / max) * (H - 24);
+  const line = pts.map(([t, v], i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const fmt = (t: number) => new Date(t * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const mid = t0 + (t1 - t0) / 2;
 
   return (
     <div style={{ background: bg, borderRadius: 20, padding: "28px 32px", height: "100%", boxSizing: "border-box" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Label color={POOL}>launches per hour</Label>
-        <span style={{ fontFamily: MONO, fontSize: 14, color: DIM }}>peak {max} in one hour</span>
+        <Label color={POOL}>coins launched, all-time</Label>
+        <span style={{ fontFamily: MONO, fontSize: 14, color: DIM }}>since {pts.length ? fmt(t0) : "…"}</span>
       </div>
       <svg width={W} height={H + 34} style={{ display: "block", marginTop: 34, overflow: "visible" }}>
         <defs>
-          <linearGradient id="recap-bar" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={POOL} stopOpacity="0.95" />
-            <stop offset="100%" stopColor={POOL} stopOpacity="0.25" />
-          </linearGradient>
-          <linearGradient id="recap-bar-dim" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={POOL} stopOpacity="0.5" />
-            <stop offset="100%" stopColor={POOL} stopOpacity="0.12" />
+          <linearGradient id="recap-growth" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={POOL} stopOpacity="0.32" />
+            <stop offset="100%" stopColor={POOL} stopOpacity="0" />
           </linearGradient>
         </defs>
-        {hourly.map((v, i) => {
-          const h = Math.max(4, (v / max) * H);
-          const x = i * (bw + gap);
-          return (
-            <g key={i}>
-              <rect x={x} y={H - h} width={bw} height={h} rx={5} fill={i === peak ? "url(#recap-bar)" : "url(#recap-bar-dim)"} />
-              {i === peak && (
-                <text x={x + bw / 2} y={H - h - 10} textAnchor="middle" fill={FG} style={{ fontFamily: MONO, fontSize: 14 }}>
-                  {v}
-                </text>
-              )}
-            </g>
-          );
-        })}
-        {ticks.map((t, i) => (
-          <text
-            key={t}
-            x={i === 0 ? 0 : i === ticks.length - 1 ? W : (W * i) / (ticks.length - 1)}
-            y={H + 28}
-            textAnchor={i === 0 ? "start" : i === ticks.length - 1 ? "end" : "middle"}
-            fill={DIM}
-            style={{ fontFamily: MONO, fontSize: 13 }}
-          >
-            {t}
-          </text>
-        ))}
+        {pts.length > 0 && (
+          <>
+            <path d={`${line} L${x(t1)},${H} L0,${H} Z`} fill="url(#recap-growth)" />
+            <path d={line} fill="none" stroke={POOL} strokeWidth={3} strokeLinejoin="round" />
+            <circle cx={x(t1)} cy={y(max)} r={11} fill={POOL} fillOpacity={0.18} />
+            <circle cx={x(t1)} cy={y(max)} r={5.5} fill={POOL} />
+            <text x={x(t1)} y={y(max) - 20} textAnchor="end" fill={FG} style={{ fontFamily: MONO, fontSize: 15 }}>
+              {total.toLocaleString("en-US")}
+            </text>
+          </>
+        )}
+        {pts.length > 0 &&
+          [
+            [0, fmt(t0), "start"],
+            [W / 2, fmt(mid), "middle"],
+            [W, "now", "end"],
+          ].map(([tx, label, anchor]) => (
+            <text key={String(label) + anchor} x={tx as number} y={H + 28} textAnchor={anchor as "start" | "middle" | "end"} fill={DIM} style={{ fontFamily: MONO, fontSize: 13 }}>
+              {label}
+            </text>
+          ))}
       </svg>
     </div>
   );
@@ -213,16 +209,16 @@ function Recap({ scene }: { scene?: boolean }) {
       ) : (
         <div style={{ position: "absolute", inset: 0, background: "radial-gradient(1100px 520px at 78% -10%, rgba(201,168,255,0.07), transparent 70%)" }} />
       )}
-      <TopBar pad={pad} right={`${date} · last 24 hours`} />
+      <TopBar pad={pad} right={date} />
 
       <div style={{ position: "absolute", left: pad, right: pad, top: 150, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
         <Headline label="24h volume" value={v((x) => usd(x.volume24h))} sub="traded across every coin" color={GREEN} bg={bg} />
-        <Headline label="coins launched" value={v((x) => int(x.launches24h))} sub={v((x) => `${int(x.launches)} all-time`)} color={POOL} bg={bg} />
+        <Headline label="coins launched" value={v((x) => int(x.launches))} sub={v((x) => `by ${int(x.creators)} creators`)} color={POOL} bg={bg} />
         <Headline label="combined market cap" value={v((x) => usd(x.marketCap))} sub={v((x) => `${int(x.graduated)} graduated`)} color={AMBER} bg={bg} />
       </div>
 
       <div style={{ position: "absolute", left: pad, right: pad, top: 368, height: 352, display: "grid", gridTemplateColumns: "852px 1fr", gap: 20 }}>
-        <HourlyChart hourly={s?.hourly ?? Array.from({ length: 24 }, () => 0)} bg={bg} />
+        <GrowthChart growth={s?.growth ?? []} total={s?.launches ?? 0} bg={bg} />
         <TopCoins top={(s?.top ?? []).slice(0, 4)} bg={bg} />
       </div>
 

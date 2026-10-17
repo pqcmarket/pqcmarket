@@ -44,27 +44,50 @@ function useReducedMotion() {
   return reduced;
 }
 
-function useLogos() {
+/** Fetches an image into a data URL, so a PNG export never has to re-fetch it. */
+async function toDataUrl(src: string) {
+  const blob = await fetch(src).then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))));
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function useLogos(inline: boolean) {
   const [logos, setLogos] = useState<Record<string, string>>({});
   useEffect(() => {
     let cancelled = false;
     fetch("/api/quotes?proxy=1")
       .then((r) => r.json())
-      .then((j) => {
-        if (cancelled) return;
+      .then(async (j) => {
         const out: Record<string, string> = {};
         for (const q of (j.quotes ?? []) as { symbol: string; image: string | null }[]) {
           const s = q.symbol.trim();
-          if ((s === "SOL" || s === "USDC") && q.image) out[s] = q.image;
+          if ((s === "SOL" || s === "USDC") && q.image) out[s] = inline ? await toDataUrl(q.image).catch(() => q.image!) : q.image;
         }
-        setLogos(out);
+        if (!cancelled) setLogos(out);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [inline]);
   return logos;
+}
+
+/** A point on the cubic deposit path at t (for the still frame's particles). */
+function inPoint(y: number, t: number) {
+  const p = [
+    [122, y],
+    [250, y],
+    [290, VY],
+    [VX - 124, VY],
+  ];
+  const u = 1 - t;
+  const k = [u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t];
+  return { x: k.reduce((s, c, i) => s + c * p[i][0], 0), y: k.reduce((s, c, i) => s + c * p[i][1], 0) };
 }
 
 /** Deterministic "digest" cells for the signature card. */
@@ -100,10 +123,14 @@ export function SplIcon({ className }: { className?: string }) {
   );
 }
 
-export function PoolFlow() {
+/**
+ * `still` renders one frozen frame for exports (brand graphics): no SMIL,
+ * particles placed along the paths, logos inlined as data URLs.
+ */
+export function PoolFlow({ still = false }: { still?: boolean } = {}) {
   const reduced = useReducedMotion();
-  const logos = useLogos();
-  const anim = !reduced;
+  const logos = useLogos(still);
+  const anim = !reduced && !still;
   const exitEnd = WALLET.cx - 33;
 
   return (
@@ -199,7 +226,7 @@ export function PoolFlow() {
           </circle>
           {/* 67 hash chains, swept in a wave */}
           {Array.from({ length: 67 }, (_, i) => (
-            <rect key={i} x={-1.6} y={-106} width={3.2} height={13} rx={1.6} fill={POOL} opacity={0.18} transform={`rotate(${(i * 360) / 67})`}>
+            <rect key={i} x={-1.6} y={-106} width={3.2} height={13} rx={1.6} fill={POOL} opacity={anim ? 0.18 : 0.15 + 0.85 * Math.exp(-((40 - i + 67) % 67) / 14)} transform={`rotate(${(i * 360) / 67})`}>
               {anim && <animate attributeName="opacity" values="0.15;1;0.15" dur="3.2s" begin={`${(i * 1.6) / 67}s`} repeatCount="indefinite" />}
             </rect>
           ))}
@@ -282,6 +309,17 @@ export function PoolFlow() {
             your wallet
           </text>
         </g>
+
+        {!anim && still && (
+          <g filter="url(#pf-soft)">
+            {SOURCES.flatMap((t) => [0.24, 0.52, 0.78].map((f) => ({ ...inPoint(t.y, f), c: t.color, k: `${t.key}${f}` }))).map((p) => (
+              <circle key={p.k} cx={p.x} cy={p.y} r={3.8} fill={p.c} />
+            ))}
+            <circle cx={VX} cy={86} r={4.5} fill={GREEN} />
+            <circle cx={VX + 124 + 30} cy={VY} r={4.2} fill={GREEN} />
+            <circle cx={WALLET.cx - 52} cy={VY} r={4.2} fill={GREEN} />
+          </g>
+        )}
 
         {/* ---------- captions ---------- */}
         {[

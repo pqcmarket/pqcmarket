@@ -9,7 +9,7 @@ import { DigestGrid } from "./digest-grid";
 import { Skeleton } from "./ui";
 
 type CardLaunch = Pick<LaunchItem, "mint" | "name" | "symbol" | "image_url" | "leaf_index"> &
-  Partial<Pick<LaunchItem, "launched_at" | "message_hash" | "scheme" | "dev_vault" | "quote_symbol" | "quote_image">> & { digest?: Uint8Array };
+  Partial<Pick<LaunchItem, "launched_at" | "message_hash" | "scheme" | "dev_vault" | "quote_symbol" | "quote_image" | "reward_mode" | "reward_share_bps">> & { digest?: Uint8Array };
 
 export function CoinCard({
   launch,
@@ -63,6 +63,11 @@ export function CoinCard({
             )}
           </div>
           <div className="mt-1.5 truncate font-mono text-[11px] text-dim">
+            {launch.reward_mode === "holders" && (
+              <span className="text-up" title="Holder rewards: a share of this coin's creator fees goes to holders who keep it in a quantum vault">
+                {Math.round((launch.reward_share_bps ?? 5000) / 100)}% fees to holders ·{" "}
+              </span>
+            )}
             {schemeLabel(launch.scheme, launch.leaf_index)}
             {launch.launched_at && <> · {ago(launch.launched_at)}</>}
           </div>

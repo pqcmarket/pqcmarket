@@ -24,6 +24,7 @@ const TOC: TocItem[] = [
   { id: "wallets", label: "Wallets" },
   { id: "vault", label: "Quantum vault" },
   { id: "pools", label: "Post-quantum pools" },
+  { id: "holder-rewards", label: "Quantum holder rewards" },
   { id: "security", label: "Security analysis" },
   { id: "parameters", label: "Parameters" },
   { id: "verify-yourself", label: "Verify it yourself" },
@@ -373,6 +374,29 @@ position     = vault[0..] of the pool identity</Formula>
               <B>What this protects.</B> Withdrawing needs a valid WOTS signature over the exact recipient, mint, amount and next vault.
               A forged or stolen ed25519 signature can&apos;t produce one. The remaining dependency is the same as the vault&apos;s: a
               wallet-only identity is re-derivable from the wallet key, and a passphrase-hardened identity closes that gap.
+            </P>
+          </Section>
+
+          <Section id="holder-rewards" title="Quantum holder rewards">
+            <P>
+              A coin can launch with <B>quantum holder rewards</B>: half of its creator fees go to the people who hold it in a
+              quantum vault. The coin&apos;s on-chain creator is still the treasury, like every launch; the mode is recorded with the
+              launch, and the payouts are made from a public rewards wallet.
+            </P>
+            <P>
+              <B>Fees per coin</B> are read from pump.fun&apos;s own trade events. Every bonding-curve trade reports its{" "}
+              <Code>creatorFee</Code> and every PumpSwap trade its <Code>coinCreatorFee</Code>, so the amount a coin has earned is the
+              sum over its trades, in its quote token. The holders&apos; share is half of that, converted to SOL at payout time.
+            </P>
+            <Formula>owed(coin) = 50% × Σ creator fees(coin) − paid(coin)
+weight(vault) = min(held now, held at the previous payout)
+payout(vault) = owed × weight / Σ weights</Formula>
+            <P>
+              <B>Who earns</B>: vault chains that hold the coin. A vault registers itself by its first key hash; the server derives the
+              address from the hash, so only real WOTS-locked vaults count, and follows tombstones to the live vault. Rewards are paid in
+              SOL into that vault, so only a hash-based signature can move them. Taking the smaller of the current and previous holding
+              means a deposit starts earning from the payout after it lands. Each payout carries a memo naming the coin, so anyone can
+              total what a coin&apos;s holders have received from the chain.
             </P>
           </Section>
 

@@ -72,6 +72,7 @@ function LaunchForm() {
   const [pair, setPair] = useState<Pair>(SOL_PAIR);
   const [scheme, setScheme] = useState<SchemeId>("wots");
   const [quantum, setQuantum] = useState(false);
+  const [rewards, setRewards] = useState(false);
   const [vault, setVault] = useState<VaultTarget | null>(null);
   const [vaultError, setVaultError] = useState<string | null>(null);
   const [mintNonce, setMintNonce] = useState(0);
@@ -211,6 +212,7 @@ function LaunchForm() {
           attestation,
           ...(quantum && vault ? { vault: vault.address, vaultHash: vault.pkHash } : {}),
           ...(tokenPair ? { quoteMint: pair.mint } : {}),
+          ...(rewards ? { rewards: true } : {}),
         }),
       }).then((r) => r.json());
       if (prep.error) throw new Error(prep.error);
@@ -273,6 +275,7 @@ function LaunchForm() {
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <Panel className="p-6">
         <ModeToggle quantum={quantum} onChange={chooseMode} disabled={running} />
+        <RewardsToggle on={rewards} onChange={setRewards} disabled={running} />
 
         <div className="mt-6 grid gap-5 border-t border-line pt-6 sm:grid-cols-[140px_1fr]">
           <div>
@@ -504,6 +507,8 @@ function LaunchForm() {
               dev_vault: quantum ? (vault?.address ?? "pending") : null,
               quote_symbol: tokenPair ? pair.symbol : null,
               quote_image: tokenPair ? pair.image : null,
+              reward_mode: rewards ? "holders" : null,
+              reward_share_bps: rewards ? 5000 : null,
             }}
             market={{ price: null, change24h: null, marketCap: null, volume24h: null, holders: null, curve: null, indexed: true }}
           />
@@ -550,6 +555,37 @@ function ModeToggle({ quantum, onChange, disabled }: { quantum: boolean; onChang
         ]}
       />
     </div>
+  );
+}
+
+/** Opt-in: half the coin's creator fees go to holders who keep it in a quantum vault. */
+function RewardsToggle({ on, onChange, disabled }: { on: boolean; onChange: (on: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={() => onChange(!on)}
+      className={cn(
+        "mt-3 flex w-full cursor-pointer items-start gap-3 rounded-xl border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        on ? "border-up/50 bg-up/[0.05]" : "border-line bg-bg hover:border-line-strong",
+      )}
+    >
+      <span className={cn("mt-0.5 flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors", on ? "bg-up" : "bg-surface-3")}>
+        <span className={cn("h-4 w-4 rounded-full bg-white transition-transform", on && "translate-x-4")} />
+      </span>
+      <span className="min-w-0">
+        <span className="flex items-center gap-2 text-[13.5px] font-medium text-fg">
+          Quantum holder rewards
+          {on && <span className="font-mono text-[11px] text-up">50% of fees to holders</span>}
+        </span>
+        <span className="mt-0.5 block text-[12px] leading-relaxed text-muted">
+          Half of this coin&apos;s creator fees are paid in SOL to holders who keep it in their quantum vault, straight into the vault, so
+          only a hash-based signature can move the rewards.
+        </span>
+      </span>
+    </button>
   );
 }
 

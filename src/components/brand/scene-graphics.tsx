@@ -118,6 +118,45 @@ export function SceneBunkerMode() {
   );
 }
 
+/** Holder rewards launch, in the "Bunker mode is live" composition. */
+export function SceneHolderRewards() {
+  return (
+    <Frame w={1600} h={900} plain>
+      <Scene w={1600} h={900} scale={1.16} x={0.5} y={0} />
+      <Shade style={{ background: "linear-gradient(180deg, rgba(18,17,16,0.92) 0%, rgba(18,17,16,0.6) 22%, rgba(18,17,16,0) 45%, rgba(18,17,16,0) 72%, rgba(18,17,16,0.96) 100%)" }} />
+      <TopBar pad={96} right="rewards: on" />
+      <div style={{ position: "absolute", left: 0, right: 0, top: 150, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+        <Headline size={104}>
+          Hold it quantum. <Accent>Get paid.</Accent>
+        </Headline>
+        <Body size={26} style={{ marginTop: 22, color: "#d8d2ca" }}>
+          Quantum holder rewards: half of a coin&apos;s creator fees go to holders who keep it in their quantum vault.
+        </Body>
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: 96,
+          right: 96,
+          bottom: 64,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontFamily: "'PQC Mono', monospace",
+          fontSize: 18,
+          borderTop: `1px solid ${LINE_STRONG}`,
+          paddingTop: 22,
+        }}
+      >
+        <Ok>50% of fees to holders</Ok>
+        <Ok>paid in SOL daily</Ok>
+        <Ok>into your quantum vault</Ok>
+        <Ok>wots-locked rewards</Ok>
+      </div>
+    </Frame>
+  );
+}
+
 export function SceneProof() {
   const s = useSample();
   return (

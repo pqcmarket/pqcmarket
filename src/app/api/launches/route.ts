@@ -4,7 +4,7 @@ import { rankMints, type RankSort } from "@/lib/server/ranking";
 import { db } from "@/lib/server/supabase";
 
 const COLUMNS =
-  "mint, name, symbol, description, image_url, creator, pq_address, leaf_index, scheme, message_hash, dev_buy_sol, dev_vault, quote_mint, quote_symbol, quote_image, created_at, launched_at, twitter, telegram, website, pqc_identities(passphrase_hardened, anchor_tx)";
+  "mint, name, symbol, description, image_url, creator, pq_address, leaf_index, scheme, message_hash, dev_buy_sol, dev_vault, quote_mint, quote_symbol, quote_image, reward_mode, reward_share_bps, created_at, launched_at, twitter, telegram, website, pqc_identities(passphrase_hardened, anchor_tx)";
 
 const PAGE = 48;
 const SORTS = new Set<RankSort>(["mcap", "volume", "holders"]);
@@ -62,6 +62,7 @@ async function list(params: URLSearchParams) {
   const kind = params.get("kind");
   if (kind === "quantum") idQuery = idQuery.not("dev_vault", "is", null);
   else if (kind === "standard") idQuery = idQuery.is("dev_vault", null);
+  else if (kind === "rewards") idQuery = idQuery.eq("reward_mode", "holders");
   // Pair: "sol" (the default quote), "token" (any non-SOL pair) or a specific pair mint.
   const pair = params.get("pair");
   if (pair === "sol") idQuery = idQuery.is("quote_mint", null);

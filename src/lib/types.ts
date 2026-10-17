@@ -16,6 +16,9 @@ export type LaunchItem = {
   quote_mint?: string | null;
   quote_symbol?: string | null;
   quote_image?: string | null;
+  /** Quantum holder rewards: 'holders' when a share of the creator fees goes to vault holders. */
+  reward_mode?: string | null;
+  reward_share_bps?: number | null;
   created_at: string;
   launched_at: string | null;
   twitter: string | null;

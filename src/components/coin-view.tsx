@@ -8,6 +8,7 @@ import { SCHEMES, isSchemeId } from "@/lib/pq/scheme-info";
 import { verifyLaunch, type LaunchVerification } from "@/lib/pq/verify-launch";
 import type { CurveState } from "@/lib/types";
 import { ago, cn, coinPath, num, pct, price, short, usd, keepKnown, thumb } from "@/lib/format";
+import { RewardsCard } from "./rewards-card";
 import { LaunchVerificationView } from "./verify-trace";
 import { Button, CopyText, Panel, Pill, Skeleton } from "./ui";
 
@@ -33,6 +34,7 @@ type Payload = {
     quote_mint: string | null;
     quote_symbol: string | null;
     quote_image: string | null;
+    reward_mode?: string | null;
     launched_at: string | null;
     tx_signature: string | null;
   };
@@ -258,6 +260,8 @@ export function CoinView({ mint, quantumRoute = false }: { mint: string; quantum
         </div>
 
         <aside className="space-y-4">
+          {launch.reward_mode === "holders" && <RewardsCard mint={launch.mint} symbol={launch.symbol} />}
+
           {quantum && (
             <Panel className="relative overflow-hidden border-line-strong p-5">
               <div className="flex items-center justify-between">
